@@ -177,3 +177,6 @@ pyrightconfig.json
 
 # Hidden files
 *.hidden
+
+# Add .DS_Store files to the list of ignored files
+.DS_Store
