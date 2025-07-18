@@ -104,17 +104,17 @@ Q7. How much time do you normally spend during your visit?
 Type: [SINGLE CHOICE]
 Options:
 0. Below 30 minutes
-1. 30 minutes to 1h
-2. 1h to 2h
-3. 2h to 3h
-4. More than 3h
+1. Between 30 minutes to 1 hour
+2. Between 1 hour to 2 hours
+3. Between 2 hours to 3 hours
+4. More than 3 hours
 
 
 Q8. The nearest Starbucks's outlet to you is…?
 Type: [SINGLE CHOICE]
 Options:
 0. Within 1km
-1. 1km to 3km
+1. 1km - 3km
 2. More than 3km
 
 
@@ -141,7 +141,7 @@ Type: [SINGLE CHOICE]
 Options:
 0. Zero
 1. Less than RM20
-2. RM20 to RM40
+2. Around RM20 - RM40
 3. More than RM40
 
 
