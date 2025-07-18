@@ -180,7 +180,7 @@ Options:
 1. Social Media
 2. Emails
 3. Deal sites (fave, iprice, etc)
-4. In Store display
+4. In Store displays
 5. Billboards
 6. Through friends and word of mouth
 7. Application offer
