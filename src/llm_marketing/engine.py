@@ -66,27 +66,33 @@ class InferenceEngine:
         """)
             
     
-    def generate_prompt(self, profile):
-        # Get profile values
+    def generate_prompt(self, profile, prior_answers):
         GENDER = profile["GENDER"]
         AGE = profile["AGE"]
         EMPLOYMENT = profile["EMPLOYMENT"]
         INCOME = profile["INCOME"]
 
-        # Generate prompt
+        # Fill the profile context
         context = llm_prompts.context
         context = context.replace("[AGE]", str(AGE).lower().replace(".", ""))
         context = context.replace("[GENDER]", str(GENDER).lower().replace(".", ""))
         context = context.replace("[EMPLOYMENT]", str(EMPLOYMENT).lower().replace(".", ""))
         context = context.replace("[INCOME]", str(INCOME).lower().replace(".", ""))
 
+        # Add prior memory if available
+        if len(prior_answers) > 0:
+            memory_lines = "\n".join([f"{i+1}. {json.dumps(a)}" for i, a in enumerate(prior_answers)])
+            memory = llm_prompts.memory.replace("[MEMORY_LINES]", memory_lines)
+            context = context + memory
+
+        # Return messages list
         messages = [
-                {"role": "system", "content": context},
-                {"role": "user", "content": llm_prompts.prompt},
-            ]
+            {"role": "system", "content": context},
+            {"role": "user", "content": llm_prompts.prompt},
+        ]
 
         return messages
-        
+
     def parse_json(self, json_data):
         try:
             # Remove markdown formatting
@@ -138,18 +144,18 @@ class InferenceEngine:
         """)
 
 
-    def generate_answer(self, messages):
-        completion = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            stream=False,
-            max_tokens=self.args.max_tokens,
-            temperature=self.args.temperature,
-            seed=random.randint(0, 10000),
-            top_p=self.args.top_p,
-        )
+    # def generate_answer(self, messages):
+    #     completion = self.client.chat.completions.create(
+    #         model=self.model,
+    #         messages=messages,
+    #         stream=False,
+    #         max_tokens=self.args.max_tokens,
+    #         temperature=self.args.temperature,
+    #         seed=random.randint(0, 10000),
+    #         top_p=self.args.top_p,
+    #     )
 
-        return self.parse_json(completion.choices[0].message.content)
+    #     return self.parse_json(completion.choices[0].message.content)
     
     def generate_answer(self, messages):
         for attempt in range(3):
@@ -172,32 +178,33 @@ class InferenceEngine:
 
     def run(self, df, chunk_id):
         self.df = df
-        # Iterate over all profiles in the dataset
         w = 0
         n_answers = self.args.num_samples_per_profile * len(self.df)
         for idx in range(len(self.df)):
             if w % 5 == 0:
                 print(f"Chunk {chunk_id} - Profile {idx} - {w}/{n_answers} answers generated")
-                
-            # Get profile
-            profile = self.df.iloc[idx]
-            messages = self.generate_prompt(profile)
 
+            profile = self.df.iloc[idx]
+            profile_id = profile["ID"]
             answer_id = 0
+            prior_answers = [] # Memory for this profile
+
             while answer_id < self.args.num_samples_per_profile:
-                # Generate answer
+                messages = self.generate_prompt(profile, prior_answers=prior_answers)
                 answer = self.generate_answer(messages)
-            
+
                 if answer is None:
                     print(f"Chunk {chunk_id} - Invalid JSON format. Retrying...")
                     continue
-                
-                # Save to database
+
                 try:
-                    self.save_to_db(profile["ID"], answer_id, profile, answer)
+                    self.save_to_db(profile_id, answer_id, profile, answer)
                     self.db.commit()
-                except:
-                    print(f"Chunk {chunk_id} - Error saving to database. Retrying...")
+                except Exception as e:
+                    print(f"Chunk {chunk_id} - Error saving to database: {e}. Retrying...")
                     continue
+
+                # Add to memory
+                prior_answers.append(answer)
                 answer_id += 1
                 w += 1
